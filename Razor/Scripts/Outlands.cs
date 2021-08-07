@@ -23,10 +23,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Assistant.Core;
-using Assistant.HotKeys;
 using Assistant.Scripts.Engine;
 using Assistant.Scripts.Helpers;
 using Assistant.UI;
+using Ultima;
 
 namespace Assistant.Scripts
 {
@@ -350,11 +350,12 @@ namespace Assistant.Scripts
             return true;
         }
 
-        private static readonly Dictionary<string, LockType> _lockTypeMap = new Dictionary<string, LockType>
+        private static readonly Dictionary<string, LockType> LockTypeMap = new Dictionary<string, LockType>
         {
             { "up", LockType.Up },
             { "down", LockType.Down },
             { "lock", LockType.Locked },
+            { "locked", LockType.Locked }
 
         };
 
@@ -363,21 +364,21 @@ namespace Assistant.Scripts
             if (args.Length < 2)
                 throw new RunTimeError("Usage: setskill (skill_name) (up/down/lock)");
 
-            if (!_lockTypeMap.TryGetValue(args[1].AsString(), out var lockType))
+            if (!LockTypeMap.TryGetValue(args[1].AsString(), out var lockType))
                 throw new RunTimeError("Invalid set skill modifier - should be up/down/lock");
 
-            int skillId;
+            var skillInfo = Skills.SkillEntries.Find(x => string.Equals(x.Name, args[0].AsString(), StringComparison.CurrentCultureIgnoreCase));
 
-            if (!SkillHotKeys.UsableSkillsByName.TryGetValue(args[0].AsString().ToLower(), out skillId))
+            if (skillInfo == null)
             {
                 throw new RunTimeError("Invalid skill name");
             }
 
             // Send Information to Server
-            Client.Instance.SendToServer(new SetSkillLock(skillId, lockType));
+            Client.Instance.SendToServer(new SetSkillLock(skillInfo.Index, lockType));
 
             // Update razor window
-            var skill = World.Player.Skills[skillId];
+            var skill = World.Player.Skills[skillInfo.Index];
             skill.Lock = lockType;
             Assistant.Engine.MainWindow.SafeAction(s => s.RedrawSkills());
 
@@ -694,7 +695,7 @@ namespace Assistant.Scripts
             return (uint)items.Sum(x => x.Amount);
         }
 
-        private static readonly Dictionary<string, byte> _targetMap = new Dictionary<string, byte>
+        private static readonly Dictionary<string, byte> TargetMap = new Dictionary<string, byte>
         {
             {"neutral", 0 },
             {"harmful", 1 },
@@ -708,7 +709,7 @@ namespace Assistant.Scripts
 
             if (args.Length > 0)
             {
-                if (!_targetMap.TryGetValue(args[0].AsString().ToLower(), out type))
+                if (!TargetMap.TryGetValue(args[0].AsString().ToLower(), out type))
                 {
                     throw new RunTimeError("Invalid target type");
                 }
