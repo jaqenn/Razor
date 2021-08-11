@@ -77,7 +77,7 @@ namespace Assistant.Scripts
 
             // Mobile flags
             Interpreter.RegisterExpressionHandler("paralyzed", Paralyzed);
-            Interpreter.RegisterExpressionHandler("blessed", Blessed);
+            Interpreter.RegisterExpressionHandler("invul", Blessed);
             Interpreter.RegisterExpressionHandler("warmode", InWarmode);
             Interpreter.RegisterExpressionHandler("noto", Notoriety);
             Interpreter.RegisterExpressionHandler("dead", Dead);
@@ -214,13 +214,25 @@ namespace Assistant.Scripts
             {
                 case GetLabelState.NONE:
                     _getLabelState = GetLabelState.WAITING_FOR_FIRST_LABEL;
-                    Interpreter.Timeout(2000, () => { return true; });
+                    Interpreter.Timeout(2000, () =>
+                    {
+                        _onLabelMessage = null;
+                        MessageManager.OnLabelMessage -= _onLabelMessage;
+                        _getLabelState = GetLabelState.NONE;
+                        MessageManager.GetLabelCommand = false;
+                        return true;
+                    });
 
                     // Single click the object
                     Client.Instance.SendToServer(new SingleClick((Serial)args[0].AsSerial()));
 
                     // Capture all message responses
                     StringBuilder label = new StringBuilder();
+                    
+                    // Some messages from Outlands server are send in sequence of LabelType and RegularType
+                    // so we want to invoke that _onLabelMessage in both cases with delays
+                    MessageManager.GetLabelCommand = true;
+
                     _onLabelMessage = (p, a, source, graphic, type, hue, font, lang, sourceName, text) =>
                     {
                         if (source != serial)
@@ -237,7 +249,7 @@ namespace Assistant.Scripts
 
                         label.AppendLine(text);
 
-                        Interpreter.SetVariable(name, label.ToString(), false);
+                        Interpreter.SetVariable(name, label.ToString());
                     };
 
                     MessageManager.OnLabelMessage += _onLabelMessage;
@@ -249,6 +261,7 @@ namespace Assistant.Scripts
                     MessageManager.OnLabelMessage -= _onLabelMessage;
                     _onLabelMessage = null;
                     _getLabelState = GetLabelState.NONE;
+                    MessageManager.GetLabelCommand = false;
                     return true;
             }
 
