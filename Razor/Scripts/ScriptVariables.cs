@@ -20,6 +20,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Xml;
 using Assistant.Scripts.Engine;
 
@@ -79,7 +80,8 @@ namespace Assistant.Scripts
 
         public static void ClearAll()
         {
-            foreach (var kv in _variables)
+            var varList = _variables.ToList();
+            foreach (var kv in varList)
             {
                 UnregisterVariable(kv.Key);
             }
